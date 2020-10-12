@@ -178,41 +178,42 @@ Goodman_Smin = Goodman_Smean - Goodman_Samp
 Goodman_Smax_FOS = Goodman_Smean_FOS + Goodman_Samp_FOS
 Goodman_Smin_FOS = Goodman_Smean_FOS - Goodman_Samp_FOS
 
-fig = plt.figure(figsize=(6,6), dpi=200)
-ax = fig.add_axes([0,0,1,1])
-ax.plot(Goodman_Smean/1.E6,
+
+
+"""
+PLOT SMITH DIAGRAM
+===============================================================================
+"""
+fig1 = plt.figure(figsize=(6,6), dpi=200)
+ax1 = fig1.add_axes([0,0,1,1])
+ax1.plot(Goodman_Smean/1.E6,
         Goodman_Smax/1.E6,
         color='blue',
         label="Goodman Max")
-ax.plot(Goodman_Smean/1.E6,
+ax1.plot(Goodman_Smean/1.E6,
         Goodman_Smin/1.E6,
         color='brown',
         label="Goodman Min")
-ax.plot(Goodman_Smean_FOS/1.E6,
+ax1.plot(Goodman_Smean_FOS/1.E6,
         Goodman_Smax_FOS/1.E6,
         color='blue',
         ls='--',
         label=("{:.2f}".format(Goodman_FOS)+' FOS'))
-ax.plot(Goodman_Smean_FOS/1.E6,
+ax1.plot(Goodman_Smean_FOS/1.E6,
         Goodman_Smin_FOS/1.E6,
         color='brown',
         ls='--',
         label=("(at node "+str(FOS[np.argmin(FOS[:,4])][0].astype(int))+")"))
-ax.set_xlabel('Mean Stress [MPa]')
-ax.set_title(filename)
+ax1.set_xlabel('Mean Stress [MPa]')
+ax1.set_title(filename)
 
 
-
-
-"""
-OVERLAY THE 3 PRINCIPAL STRESSES (using error bar plotting)
-===============================================================================
-"""
+# OVERLAY THE 3 PRINCIPAL STRESSES (using error bar plotting)
 
 minPrinAmp = (minPrin[:,3] - minPrin[:,2])/2
 minPrinMean = (minPrin[:,3] + minPrin[:,2])/2
 
-ax.errorbar(minPrinMean/1.E6, 
+ax1.errorbar(minPrinMean/1.E6, 
              minPrinMean/1.E6, 
              yerr = minPrinAmp/1.E6,
              fmt='.',
@@ -224,7 +225,7 @@ ax.errorbar(minPrinMean/1.E6,
 midPrinAmp = (midPrin[:,3] - midPrin[:,2])/2
 midPrinMean = (midPrin[:,3] + midPrin[:,2])/2
 
-ax.errorbar(midPrinMean/1.E6, 
+ax1.errorbar(midPrinMean/1.E6, 
              midPrinMean/1.E6, 
              yerr = midPrinAmp/1.E6,
              fmt='.',
@@ -236,7 +237,7 @@ ax.errorbar(midPrinMean/1.E6,
 maxPrinAmp = (maxPrin[:,3] - maxPrin[:,2])/2
 maxPrinMean = (maxPrin[:,3] + maxPrin[:,2])/2
 
-ax.errorbar(maxPrinMean/1.E6, 
+ax1.errorbar(maxPrinMean/1.E6, 
              maxPrinMean/1.E6, 
              yerr = maxPrinAmp/1.E6,
              fmt='.',
@@ -247,7 +248,58 @@ ax.errorbar(maxPrinMean/1.E6,
 plt.legend(loc='lower right')
 plt.grid(which='major', axis='both')
 
-fig.savefig(filename+'_Goodman.png', bbox_inches = "tight")
+fig1.savefig(filename+'_Smith.png', bbox_inches = "tight")
+
+
+
+"""
+PLOT GOODMAN DIAGRAM
+===============================================================================
+"""
+fig2 = plt.figure(figsize=(6,6), dpi=200)
+ax2 = fig2.add_axes([0,0,1,1])
+
+ax2.plot(Goodman_Smean/1.E6,
+        Goodman_Samp/1.E6,
+        color='blue',
+        label="Goodman")
+ax2.plot(Goodman_Smean_FOS/1.E6,
+        Goodman_Samp_FOS/1.E6,
+        color='blue',
+        ls='--',
+        label=("{:.2f}".format(Goodman_FOS)+' FOS'))
+ax2.set_xlabel('Mean Stress [MPa]')
+ax2.set_ylabel('Stress Amplitude [MPa]')
+ax2.set_title(filename)
+
+
+# PLOT THE 3 PRINCIPAL STRESS AMPLITUDES
+
+ax2.plot(minPrinMean/1.E6, 
+         minPrinAmp/1.E6, 
+         color='green',
+         marker='.',
+         lw=0,
+         label="max(S3)")
+
+ax2.plot(midPrinMean/1.E6, 
+         midPrinAmp/1.E6, 
+         color='orange',
+         marker='.',
+         lw=0,
+         label="max(S2)")
+
+ax2.plot(maxPrinMean/1.E6, 
+         maxPrinAmp/1.E6, 
+         color='red',
+         marker='.',
+         lw=0,
+         label="max(S1)")
+
+plt.legend(loc='upper right')
+plt.grid(which='major', axis='both')
+
+fig2.savefig(filename+'_Goodman.png', bbox_inches = "tight")
 
 
 
