@@ -9,9 +9,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits import mplot3d
 
-Sult = 300
-Slife = Sult/2
-filename = 'Job-3-QWcenterW2-1pt2mm'
+SultT = 300.E+6
+SultC = 1000.E+6
+Slife = 150.E+6
+filename = 'Job-3-QWosW2-5mm'
 
 
 """
@@ -91,27 +92,57 @@ CALCULATE FACTORS OF SAFETY
 ===============================================================================
 """
 
+# Initialize FOS matrix:
+# This takes the nodal coordinate matrix and adds 2 empty columns to record
+# the minimum FOS at each node along with which principal stress contains
+# the minimum.
 FOS = np.concatenate((nodeCoord, np.zeros((len(nodeCoord),2))), axis=1)
+
+# Initialze scratch matrix:
+# Column [0] is the principal stress direction
+# Column [1] will hold the FOS
 scratch = np.zeros((3,2))
 scratch[0,0] = 1
 scratch[1,0] = 2
 scratch[2,0] = 3
 
 
-def getFOS(Sn,Su,prinStress):
-    Sm = (prinStress[3] + prinStress[2]) / 2
-    Sa = (prinStress[3] - prinStress[2]) / 2
-    FOS = 1 / (Sa/Sn + abs(Sm)/Su)
+def GoodmanSamp(SultC,SultT,Slife,Smean):
+    if Smean >= -1*SultC and Smean < Slife-SultC:
+        Samp = SultC * (1 - abs(Smean)/SultC)
+    elif Smean >= Slife-SultC and Smean < 0:
+        Samp = Slife
+    elif Smean >= 0 and Smean <= SultT:
+        Samp = Slife * (1 - Smean/SultT)
+    else:
+        Samp = 0  
+    return Samp
+
+
+def getFOS(SultC,SultT,Slife,prinStress):
+    Smean = (prinStress[3] + prinStress[2]) / 2
+    Samp = (prinStress[3] - prinStress[2]) / 2
+    
+    if Smean >= -1*SultC and Smean < Slife-SultC:
+        FOS = 1 / (Samp/SultC + abs(Smean)/SultC)
+    elif Smean >= Slife-SultC and Smean < 0:
+        FOS = Slife / Samp
+    elif Smean >= 0 and Smean <= SultT:
+        FOS = 1 / (Samp/Slife + abs(Smean)/SultT)
+    else:
+        FOS = 0  
+    
     return FOS
 
 
 for i in range(len(FOS)):
-    scratch[0,1] = getFOS(Slife*1.E6,Sult*1.E6,maxPrin[i])
-    scratch[1,1] = getFOS(Slife*1.E6,Sult*1.E6,midPrin[i])
-    scratch[2,1] = getFOS(Slife*1.E6,Sult*1.E6,minPrin[i])
+    scratch[0,1] = getFOS(SultC,SultT,Slife,maxPrin[i])
+    scratch[1,1] = getFOS(SultC,SultT,Slife,midPrin[i])
+    scratch[2,1] = getFOS(SultC,SultT,Slife,minPrin[i])
+    # Get the smallest FOS
     FOS[i,4] = scratch[np.argmin(scratch[:,1])][1]
+    # Get the associated principal stress direction
     FOS[i,5] = scratch[np.argmin(scratch[:,1])][0]
-
 
 
 
@@ -119,36 +150,51 @@ for i in range(len(FOS)):
 CALCULATE GOODMAN RELATIONSHIP AND PLOT SMITH DIAGRAM
 ===============================================================================
 """
-Goodman_Smean = np.array([-1*Sult, 0, Sult])
+# Get the smallest, overall FOS
+Goodman_FOS = FOS[:,4].min()
 
-Goodman_Samp = Slife * (1 - abs(Goodman_Smean)/Sult)
+# Initialize data points for Smith diagram
+Goodman_Smean = np.array([-1*SultC, -1*SultC+Slife, 0, SultT])
+Goodman_Samp = np.zeros(len(Goodman_Smean))
+
+# Initialize data points for Smith diagram w/ FOS
+Goodman_Smean_FOS = Goodman_Smean / Goodman_FOS
+Goodman_Samp_FOS = np.zeros(len(Goodman_Smean_FOS))
+
+for item in range(len(Goodman_Smean)):
+    Goodman_Samp[item] = GoodmanSamp(SultC,
+                                     SultT,
+                                     Slife,
+                                     Goodman_Smean[item])
+    
+    Goodman_Samp_FOS[item] = GoodmanSamp(SultC/Goodman_FOS,
+                                         SultT/Goodman_FOS,
+                                         Slife/Goodman_FOS,
+                                         Goodman_Smean_FOS[item])
+
 Goodman_Smax = Goodman_Smean + Goodman_Samp
 Goodman_Smin = Goodman_Smean - Goodman_Samp
 
-Goodman_FOS = FOS[:,4].min()
-
-Goodman_Smean_FOS = np.array([-1*Sult/Goodman_FOS, 0, Sult/Goodman_FOS])
-Goodman_Samp_FOS = Slife * (1/Goodman_FOS - abs(Goodman_Smean_FOS)/Sult)
 Goodman_Smax_FOS = Goodman_Smean_FOS + Goodman_Samp_FOS
 Goodman_Smin_FOS = Goodman_Smean_FOS - Goodman_Samp_FOS
 
 fig = plt.figure(figsize=(6,6), dpi=200)
 ax = fig.add_axes([0,0,1,1])
-ax.plot(Goodman_Smean,
-        Goodman_Smax,
+ax.plot(Goodman_Smean/1.E6,
+        Goodman_Smax/1.E6,
         color='blue',
         label="Goodman Max")
-ax.plot(Goodman_Smean,
-        Goodman_Smin,
+ax.plot(Goodman_Smean/1.E6,
+        Goodman_Smin/1.E6,
         color='brown',
         label="Goodman Min")
-ax.plot(Goodman_Smean_FOS,
-        Goodman_Smax_FOS,
+ax.plot(Goodman_Smean_FOS/1.E6,
+        Goodman_Smax_FOS/1.E6,
         color='blue',
         ls='--',
         label=("{:.2f}".format(Goodman_FOS)+' FOS'))
-ax.plot(Goodman_Smean_FOS,
-        Goodman_Smin_FOS,
+ax.plot(Goodman_Smean_FOS/1.E6,
+        Goodman_Smin_FOS/1.E6,
         color='brown',
         ls='--',
         label=("(at node "+str(FOS[np.argmin(FOS[:,4])][0].astype(int))+")"))
