@@ -31,7 +31,7 @@ LOAD ODB
 ===============================================================================
 """
 
-odb = openOdb(filename+'.odb',readOnly=False)
+odb = openOdb(filename+'-Results.odb',readOnly=False)
 
 
 # Get Instance
